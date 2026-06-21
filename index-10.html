@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Loan Ledger — EMI Calculator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;1,500;1,600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#1B2B23;
+    --paper:#F6F1E4;
+    --paper-line:rgba(43,38,32,0.12);
+    --ink:#2B2620;
+    --ink-soft:#6b6253;
+    --brass:#B08D57;
+    --brass-dark:#8a6d40;
+    --sage:#5C7A5E;
+    --rust:#A8553E;
+  }
+
+  *{box-sizing:border-box;}
+
+  body{
+    margin:0;
+    min-height:100vh;
+    background-color:var(--bg);
+    background-image:
+      repeating-linear-gradient(0deg, rgba(255,255,255,0.025) 0px, rgba(255,255,255,0.025) 1px, transparent 1px, transparent 28px),
+      repeating-linear-gradient(90deg, rgba(255,255,255,0.025) 0px, rgba(255,255,255,0.025) 1px, transparent 1px, transparent 28px);
+    font-family:'Inter', sans-serif;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:48px 20px;
+  }
+
+  .card{
+    position:relative;
+    width:100%;
+    max-width:480px;
+    background:var(--paper);
+    border:1px solid var(--brass);
+    border-radius:6px;
+    box-shadow:0 30px 60px -24px rgba(0,0,0,0.65);
+    padding:52px 40px 36px;
+  }
+
+  .tab{
+    position:absolute;
+    top:-14px;
+    right:36px;
+    background:var(--brass);
+    color:var(--paper);
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    font-weight:600;
+    letter-spacing:0.12em;
+    padding:5px 13px;
+    border-radius:2px;
+    transform:rotate(-2deg);
+  }
+
+  .eyebrow{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    font-weight:500;
+    letter-spacing:0.16em;
+    text-transform:uppercase;
+    color:var(--brass-dark);
+    margin:0 0 12px;
+  }
+
+  h1{
+    font-family:'Fraunces', serif;
+    font-style:italic;
+    font-weight:500;
+    font-size:clamp(26px, 5vw, 34px);
+    line-height:1.2;
+    color:var(--ink);
+    margin:0 0 10px;
+  }
+
+  .subtitle{
+    font-size:14px;
+    color:var(--ink-soft);
+    line-height:1.5;
+    max-width:36ch;
+    margin:0 0 30px;
+  }
+
+  .row{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    gap:12px;
+    padding:14px 0;
+    border-bottom:1px solid var(--paper-line);
+    transition:border-color 0.15s ease;
+  }
+
+  .row.has-focus{ border-color:var(--brass); }
+
+  .row label{
+    font-size:13px;
+    color:var(--ink-soft);
+    flex-shrink:0;
+  }
+
+  .field{
+    display:flex;
+    align-items:baseline;
+    gap:4px;
+    min-width:0;
+  }
+
+  .prefix, .suffix{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:16px;
+    color:var(--ink-soft);
+  }
+
+  input[type="number"]{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:17px;
+    font-weight:500;
+    text-align:right;
+    background:transparent;
+    border:none;
+    outline:none;
+    color:var(--ink);
+    width:120px;
+    min-width:0;
+    -moz-appearance:textfield;
+  }
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button{
+    -webkit-appearance:none;
+    margin:0;
+  }
+  input[type="number"]:focus-visible{
+    outline:2px solid var(--brass);
+    outline-offset:3px;
+    border-radius:2px;
+  }
+
+  .divider{
+    height:1px;
+    background:var(--brass);
+    opacity:0.35;
+    margin:30px 0 26px;
+  }
+
+  .result-emi{
+    text-align:center;
+    margin-bottom:26px;
+  }
+
+  .result-emi .label{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    letter-spacing:0.14em;
+    text-transform:uppercase;
+    color:var(--ink-soft);
+    margin-bottom:8px;
+  }
+
+  .result-emi .value{
+    font-family:'IBM Plex Mono', monospace;
+    font-weight:600;
+    font-size:clamp(32px, 8vw, 44px);
+    color:var(--ink);
+    letter-spacing:-0.01em;
+    transition:transform 0.2s ease;
+    display:inline-block;
+  }
+
+  .result-emi .value.pulse{ transform:scale(1.04); }
+
+  .bar-wrap{ margin-bottom:14px; position:relative; }
+
+  .bar{
+    height:26px;
+    border:1px solid var(--ink);
+    border-radius:3px;
+    overflow:hidden;
+    display:flex;
+    background:var(--paper);
+  }
+
+  .bar .principal{
+    background:var(--sage);
+    transition:width 0.5s ease;
+  }
+  .bar .interest{
+    background:var(--rust);
+    transition:width 0.5s ease;
+  }
+
+  .legend{
+    display:flex;
+    justify-content:space-between;
+    margin-top:10px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    color:var(--ink-soft);
+  }
+  .legend span{ display:inline-flex; align-items:center; gap:6px; }
+  .dot{ width:8px; height:8px; border-radius:1px; display:inline-block; }
+  .dot.principal{ background:var(--sage); }
+  .dot.interest{ background:var(--rust); }
+
+  .stamp{
+    display:inline-block;
+    border:2px solid var(--rust);
+    color:var(--rust);
+    font-family:'IBM Plex Mono', monospace;
+    font-size:10.5px;
+    font-weight:600;
+    text-transform:uppercase;
+    letter-spacing:0.04em;
+    padding:5px 10px;
+    border-radius:4px;
+    transform:rotate(-6deg);
+    opacity:0.85;
+    margin:14px auto 4px;
+    text-align:center;
+    width:fit-content;
+  }
+
+  .totals .row .value{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:15px;
+    color:var(--ink);
+    font-weight:500;
+  }
+
+  .error{
+    font-size:13px;
+    color:var(--rust);
+    text-align:center;
+    padding:20px 0;
+    font-style:italic;
+  }
+
+  .cta-row{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:14px;
+    margin-top:6px;
+  }
+
+  .built-for{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    padding:13px 24px;
+    background:var(--ink);
+    color:var(--paper);
+    font-family:'Inter', sans-serif;
+    font-weight:600;
+    font-size:14px;
+    border-radius:4px;
+    text-decoration:none;
+    letter-spacing:0.01em;
+    transition:background 0.15s ease;
+  }
+  .built-for:hover{ background:var(--brass-dark); }
+  .built-for:focus-visible{
+    outline:2px solid var(--brass);
+    outline-offset:3px;
+  }
+
+  .credit{
+    font-size:12.5px;
+    color:var(--ink-soft);
+    text-align:center;
+    line-height:1.6;
+  }
+  .credit a{ color:var(--ink-soft); }
+
+  @media (prefers-reduced-motion: reduce){
+    .bar .principal, .bar .interest, .result-emi .value{ transition:none; }
+  }
+
+  @media (max-width: 380px){
+    .card{ padding:44px 24px 30px; }
+    input[type="number"]{ width:96px; font-size:15px; }
+  }
+</style>
+</head>
+<body>
+
+<main class="card">
+  <div class="tab">EMI</div>
+  <p class="eyebrow">Loan Ledger</p>
+  <h1>Know your monthly number.</h1>
+  <p class="subtitle">Enter the loan, the rate, and the years. The ledger does the rest — live, as you type.</p>
+
+  <form id="ledger-form" autocomplete="off">
+    <div class="row" id="row-amount">
+      <label for="amount">Loan amount</label>
+      <div class="field">
+        <span class="prefix">₹</span>
+        <input type="number" id="amount" inputmode="decimal" value="2500000" min="0" step="1000">
+      </div>
+    </div>
+
+    <div class="row" id="row-rate">
+      <label for="rate">Interest rate</label>
+      <div class="field">
+        <input type="number" id="rate" inputmode="decimal" value="8.5" min="0" step="0.1">
+        <span class="suffix">% p.a.</span>
+      </div>
+    </div>
+
+    <div class="row" id="row-tenure">
+      <label for="tenure">Tenure</label>
+      <div class="field">
+        <input type="number" id="tenure" inputmode="decimal" value="20" min="0" step="1">
+        <span class="suffix">years</span>
+      </div>
+    </div>
+  </form>
+
+  <div class="divider"></div>
+
+  <div id="results" aria-live="polite">
+    <p class="error" id="error-msg" hidden>Enter a loan amount, rate, and tenure to calculate.</p>
+
+    <div id="results-content">
+      <div class="result-emi">
+        <p class="label">Monthly EMI</p>
+        <span class="value" id="emi-value">₹0</span>
+      </div>
+
+      <div class="bar-wrap">
+        <div class="bar">
+          <div class="principal" id="bar-principal" style="width:50%"></div>
+          <div class="interest" id="bar-interest" style="width:50%"></div>
+        </div>
+        <div class="legend">
+          <span><span class="dot principal"></span>Principal</span>
+          <span>Interest<span class="dot interest"></span></span>
+        </div>
+        <div class="stamp" id="stamp">0% goes to interest</div>
+      </div>
+
+      <div class="totals">
+        <div class="row">
+          <label>Total interest payable</label>
+          <span class="value" id="total-interest">₹0</span>
+        </div>
+        <div class="row">
+          <label>Total amount payable</label>
+          <span class="value" id="total-payment">₹0</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="cta-row">
+    <a class="built-for" href="https://digitalheroesco.com" target="_blank" rel="noopener">Built for Digital Heroes</a>
+    <p class="credit">Mohit Gupta · <a href="mailto:mg6426457@gmail.com">mg6426457@gmail.com</a></p>
+  </div>
+</main>
+
+<script>
+  const amountInput = document.getElementById('amount');
+  const rateInput = document.getElementById('rate');
+  const tenureInput = document.getElementById('tenure');
+
+  const emiValue = document.getElementById('emi-value');
+  const barPrincipal = document.getElementById('bar-principal');
+  const barInterest = document.getElementById('bar-interest');
+  const stamp = document.getElementById('stamp');
+  const totalInterestEl = document.getElementById('total-interest');
+  const totalPaymentEl = document.getElementById('total-payment');
+  const errorMsg = document.getElementById('error-msg');
+  const resultsContent = document.getElementById('results-content');
+
+  const fmt = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 });
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function calculate(){
+    const amount = parseFloat(amountInput.value);
+    const rate = parseFloat(rateInput.value);
+    const years = parseFloat(tenureInput.value);
+    const months = years * 12;
+
+    if (!amount || amount <= 0 || !months || months <= 0 || isNaN(rate) || rate < 0){
+      errorMsg.hidden = false;
+      resultsContent.style.display = 'none';
+      return;
+    }
+    errorMsg.hidden = true;
+    resultsContent.style.display = '';
+
+    const monthlyRate = rate / 12 / 100;
+    let emi;
+    if (monthlyRate === 0){
+      emi = amount / months;
+    } else {
+      const factor = Math.pow(1 + monthlyRate, months);
+      emi = amount * monthlyRate * factor / (factor - 1);
+    }
+
+    const totalPayment = emi * months;
+    const totalInterest = totalPayment - amount;
+    const interestPct = (totalInterest / totalPayment) * 100;
+    const principalPct = 100 - interestPct;
+
+    emiValue.textContent = '₹' + fmt.format(Math.round(emi));
+    totalInterestEl.textContent = '₹' + fmt.format(Math.round(totalInterest));
+    totalPaymentEl.textContent = '₹' + fmt.format(Math.round(totalPayment));
+
+    barPrincipal.style.width = principalPct.toFixed(1) + '%';
+    barInterest.style.width = interestPct.toFixed(1) + '%';
+    stamp.textContent = Math.round(interestPct) + '% goes to interest';
+
+    if (!reducedMotion){
+      emiValue.classList.remove('pulse');
+      void emiValue.offsetWidth; // restart animation
+      emiValue.classList.add('pulse');
+    }
+  }
+
+  [amountInput, rateInput, tenureInput].forEach(input => {
+    input.addEventListener('input', calculate);
+    const row = input.closest('.row');
+    input.addEventListener('focus', () => row.classList.add('has-focus'));
+    input.addEventListener('blur', () => row.classList.remove('has-focus'));
+  });
+
+  calculate();
+</script>
+
+</body>
+</html>
